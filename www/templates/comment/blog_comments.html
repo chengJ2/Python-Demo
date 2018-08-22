@@ -1,0 +1,41 @@
+{% extends '__base__.html' %}
+
+{% block title %}评论{% endblock %}
+
+{% block beforehead %}
+
+<script>
+</script>
+
+{% endblock %}
+
+{% block content %}
+	
+	<div class="uk-width-medium-3-4">
+	    <div class="uk-width-1-1 uk-margin-bottom">
+	        <a href="#" onclick="javascript:history.back(-1);"><font color="#406599">返回全部图文</font></a>
+	    </div>
+
+	    <div id="error" class="uk-width-1-1">
+	    </div>
+    
+    	<div style="color:#222;font-size: 18px;line-height: 26px;margin-top:24px; ">{{ blog.title }}</div>
+	     <div style="color:#999;line-height: 24px;margin-top:12px; margin-bottom: 24px;">{{ blog.created_at | datetime}}</div>
+
+		   {% for comment in comments %}
+			    <article class="uk-article" >
+		           
+		             <a href="#" target="_blank" style="color: #fff;margin-right: 2px;width: 18px;height: 18px;line-height: 18px;text-align: center;font-size: 12px;border-radius: 0%;background-color: #eee;overflow: hidden;"><img class="uk-comment-avatar uk-border-circle" style="width: 36px;height: 36px;" src="{{ comment.avatar }}"></a>
+		            <span class="uk-comment-title">&nbsp;{{ comment.user_name }}</span>&nbsp;·&nbsp;{{ comment.created_at|datetime }}
+		        </article>
+
+		        	<div style="color:#999;line-height: 24px;padding-left:54px;margin-top:12px;margin-bottom: 12px;">{{comment.content}}</div>
+		        <hr class="uk-article-divider">
+		     {% else %}
+		   		<div style="line-height: 44px;text-align: center;color:#999;font-size: 14px;font: inherit;">暂无评论</div>
+		   {% endfor %}
+
+   	 {{ pagination('/?page=', page) }}
+    </div>
+
+{% endblock %}

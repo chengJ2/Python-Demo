@@ -1,0 +1,75 @@
+{% extends '__base__.html' %}
+
+{% block title %}我的关注{% endblock %}
+
+{% block beforehead %}
+
+<script>
+
+function initVM(data) {
+    var vm = new Vue({
+        el: '#vm',
+        data: {
+            blogs: data.blogs,
+            page: data.page
+        },
+        methods: {
+            edit_blog: function (blog) {
+                location.assign('/user/blogs/edit?id=' + blog.id);
+            },
+        }
+    });
+    $('#vm').show();
+}
+$(function() {
+
+	$('#loading').hide();
+
+   /* getJSON('/api/blogs', {
+     userId:'{{ userId }}',
+     page: {{ page_index }}
+    }, function (err, results) {
+        if (err) {
+            return fatal(err);
+        }
+        $('#loading').hide();
+        initVM(results);
+    });*/
+
+});
+</script>
+
+{% endblock %}
+
+{% block content %}
+    
+    <div class="uk-width-1-1 uk-margin-bottom">
+        <div class="uk-panel uk-panel-box">
+            <ul class="uk-breadcrumb">
+                <li><a href="/manage/blogs">图文</span></li>
+                <li><a href="/manage/videos">视频</a></li>
+                <li><a href="/manage/comments">评论</a></li>
+                <li class="uk-active"><span>我的关注</span></li>
+                <li><a href="/manage/fans">我的粉丝</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="error" class="uk-width-1-1">
+    </div>
+
+    <div id="loading" class="uk-width-1-1 uk-text-center">
+        <span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i> 正在加载...</span>
+    </div>
+
+    <div class="uk-width-1-1 uk-margin-bottom">
+	 {% for follow in follows %}
+	  <div style="height: 80px;">
+	    <img src="{{follow.avatar}}" style="width: 54px;height: 54px;border-radius: 50%; background: rgba(0,0,0,.08);float: left;">
+	    <div style="font-size: 18px;color: #222;line-height: 20px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;max-width: 500px;font-weight: 700;margin-bottom: 8px;"><a target="_blank" style="margin-left: 12px;">{{follow.name}}</a></div>
+	     <div style="float: right;">{{follow.fstatus}}</div>
+	   </div>
+	 {% endfor %}
+	 {{ pagination('/?page=', page) }}
+     </div>
+{% endblock %}

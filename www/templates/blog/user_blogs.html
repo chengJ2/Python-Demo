@@ -1,0 +1,140 @@
+{% extends '__base__.html' %}
+
+{% block title %}日志{% endblock %}
+
+{% block beforehead %}
+
+<script>
+
+function initVM(data) {
+    var vm = new Vue({
+        el: '#vm',
+        data: {
+            blogs: data.blogs,
+            page: data.page
+        },
+        methods: {
+            edit_blog: function (blog) {
+                location.assign('/user/blogs/edit?id=' + blog.id);
+            },
+            delete_blog: function (blog) {
+                if (confirm('确认要删除“' + blog.title + '”？删除后不可恢复！')) {
+                    postJSON('/api/blogs/' + blog.id + '/delete', function (err, r) {
+                        if (err) {
+                            return alert(err.message || err.error || err);
+                        }
+                        refresh();
+                    });
+                }
+            },
+            auditing_blog: function (blog) {
+                var auditing;
+                if (confirm('确认“' + blog.title + '” 是否通过审核？')) {
+                   auditing = 1
+                }else{
+                   auditing = 0
+                }
+                 postJSON('/api/blogs/' + blog.id + '/auditing/'+ auditing,function (err, r) {
+                        if (err) {
+                            return alert(err.message || err.error || err);
+                        }
+                        refresh();
+                    });
+            },
+            redo_blog: function (blog) {
+                var auditing;
+                if (confirm('确认“' + blog.title + '” 是否撤回主页？')) {
+                   auditing = -1
+                }else{
+                   auditing = 6
+                }
+                 postJSON('/api/blogs/' + blog.id + '/auditing/'+ auditing,function (err, r) {
+                        if (err) {
+                            return alert(err.message || err.error || err);
+                        }
+                        refresh();
+                    });
+            }
+        }
+    });
+    $('#vm').show();
+}
+$(function() {
+    getJSON('/api/blogs', {
+     userId:'{{ userId }}',
+     page: {{ page_index }}
+    }, function (err, results) {
+        if (err) {
+            return fatal(err);
+        }
+        $('#loading').hide();
+        initVM(results);
+    });
+
+});
+</script>
+
+{% endblock %}
+
+{% block content %}
+    
+    <div class="uk-width-1-1 uk-margin-bottom">
+        <div class="uk-panel uk-panel-box">
+            <ul class="uk-breadcrumb">
+                <li class="uk-active"><span>图文</span></li>
+                <li><a href="/manage/videos">视频</a></li>
+                <li><a href="/manage/comments">评论</a></li>
+                <li><a href="/manage/follows">我的关注</span></li>
+                <li><a href="/manage/fans">我的粉丝</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="error" class="uk-width-1-1">
+    </div>
+
+    <div id="loading" class="uk-width-1-1 uk-text-center">
+        <span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i> 正在加载...</span>
+    </div>
+
+    <div id="vm" class="uk-width-1-1">
+        <a href="/user/blogs/create" class="uk-button uk-button-primary"><i class="uk-icon-plus"></i> 新日志</a>
+
+        <table class="uk-table uk-table-hover">
+            <thead>
+                <tr>
+                    <th class="uk-width-5-10">类型 / 标题 </th>
+                     <th class="uk-width-1-10">评论</th>
+                    <th class="uk-width-2-10">创建时间</th>
+                    <th class="uk-width-1-10">状态</th>
+                    <th class="uk-width-1-10" style="text-align:center;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-repeat="blog: blogs" >
+                    <td>
+                        [<span v-text="blog.type"></span>]&nbsp;·&nbsp;<a target="_blank" v-attr="href: '/blog/'+blog.id" v-text="blog.title"></a>
+                    </td>
+                    <td>
+                        <a target="_blank" v-attr="href: '/blog/'+blog.id" v-text="blog.commentsNum"></a>
+                    </td>
+                    <td>
+                        <span v-text="blog.created_at.toDateTime()"></span>
+                    </td>
+                   
+                    <td>
+                        <font color="{blog.status_color}"><div v-text="blog.status"></div></font>
+                    </td>
+                    <td style="text-align: center;">
+                        <a href="#0" v-on="click: edit_blog(blog)" title="编辑"><i class="uk-icon-edit"></i>
+                        &nbsp;·&nbsp;<a href="#0" v-on="click: delete_blog(blog)" title="删除"><i class="uk-icon-trash-o"></i>
+                        &nbsp;·&nbsp;<a href="#0" v-on="click: redo_blog(blog)" title="从主页撤回"><i class="uk-icon-fire"></i>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div v-component="pagination" v-with="page"></div>
+    </div>
+
+{% endblock %}

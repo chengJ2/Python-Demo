@@ -1,0 +1,138 @@
+{% extends '__base__.html' %}
+
+{% block title %}编辑日志{% endblock %}
+
+{% block beforehead %}
+
+<script>
+var ID = '{{id}}'
+	action = '{{action}}'
+
+function initVM(blog){
+	var vm = new Vue({
+		el:'#vm',
+		data:blog,
+		methods:{
+			submit:function(event){
+				event.preventDefault();
+				var $form = $('#vm').find('form');
+				$form.postJSON(action,this.$data,function (err,r) {
+					if (err){
+						$form.showFormError(err);
+					}else{
+						//return location.assign('/user/blogs')
+                        return location.assign('/manage/blogs')
+					}
+				})
+			}
+		}
+	});
+	$('#vm').show();
+}
+
+$(function () {
+	if (ID){
+		getJSON('/api/blogs/' + ID,function (err,blog) {
+			if (err) {
+				return fatal(err);
+			}
+			$('#loading').hide();
+			initVM(blog)
+		})
+	}else {
+		$('#loading').hide();
+		initVM({
+			title: '',
+			summary: '',
+			content: '',
+            cover:'',
+		});
+	}
+
+    getJSON('/api/category',function(err,data){
+        if(err){
+            return fatal(err);
+        }
+        categorys = data.categorys;
+        for (var i =0;i < categorys.length; i++) {
+            $("#category").append("<option value='"+categorys[i].id+"'>"+categorys[i].name_CH+"</option>");
+        }
+        
+    })
+});
+
+
+</script>
+
+{% endblock %}
+
+{% block content %}
+    
+    <!-- {% if __user__.admin %}
+    <div class="uk-width-1-1 uk-margin-bottom">
+        <div class="uk-panel uk-panel-box">
+            <ul class="uk-breadcrumb">
+                <li><a href="/manage/comments">评论</a></li>
+                <li><a href="/user/blogs">日志</a></li>
+                <li><a href="/manage/users">用户</a></li>
+            </ul>
+        </div>
+    </div>
+    {% endif %} -->
+    <div id="error" class="uk-width-1-1">
+    </div>
+
+    <div id="loading" class="uk-width-1-1 uk-text-center">
+        <span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i> 正在加载...</span>
+    </div>
+
+    <div id="vm" class="uk-width-2-3">
+        <form v-on="submit: submit" class="uk-form uk-form-stacked">
+            <div class="uk-alert uk-alert-danger uk-hidden"></div>
+            <div class="uk-form-row">
+                <label class="uk-form-label">标题:</label>
+                <div class="uk-form-controls">
+                    <input v-model="title" name="title" type="text" placeholder="标题" class="uk-width-1-1">
+                </div>
+            </div>
+            <div class="uk-form-row">
+                <label class="uk-form-label">摘要:</label>
+                <div class="uk-form-controls">
+                    <textarea v-model="summary" rows="4" name="summary" placeholder="摘要" class="uk-width-1-1" style="resize:none;"></textarea>
+                </div>
+            </div>
+            <div class="uk-form-row">
+                <label class="uk-form-label">内容:</label>
+                <div class="uk-form-controls">
+                    <textarea v-model="content" rows="16" name="content" placeholder="内容" class="uk-width-1-1" style="resize:none;"></textarea>
+                </div>
+            </div>
+            <div class="uk-form-row">
+                <label class="uk-form-label">选择分类:</label>
+                <div class="uk-form-controls">
+                    <select id="category" v-model="category_id">
+                        <option value="- please select your options -"> - 请选择 -</option>
+                    </select>
+                </div>
+            </div>
+            <div class="uk-form-row">
+                <label class="uk-form-label">封面:</label>
+                <div class="uk-form-controls">
+                    <input v-model="cover" name="cover" type="text" placeholder="封面" class="uk-width-1-1">
+                </div>
+            </div>
+            <!-- <div class="uk-form-row">
+                <label class="uk-form-label">封面:</label>
+                <div class="uk-form-controls">
+                    <input type="file" v-model="cover" rows="1" name="cover" placeholder="选择图片" class="uk-width-1-1" style="resize:none;">
+                    <input type="submit" value="上传文件" />
+                </div>
+            </div> -->
+            <div class="uk-form-row">
+                <button type="submit" class="uk-button uk-button-primary"><i class="uk-icon-save"></i> 保存</button>
+                <a href="/user/blogs" class="uk-button"><i class="uk-icon-times"></i> 取消</a>
+            </div>
+        </form>
+    </div>
+
+{% endblock %}

@@ -1,0 +1,265 @@
+{% extends '__base__.html' %}
+
+{% block title %}{{ blog.title }}{% endblock %}
+
+{% block beforehead %}
+
+<script>
+function replayClick(i){
+    $("form[id^='form-comment']").css('display','none');
+    $("#form-comment_" + i).css('display','block');
+    /*if($("#form-comment_" + i).css('display','none')){
+        $("#form-comment_" + i).css('display','block');
+    }*/
+};
+
+function replaySubmitClick(i){
+    $("#form-comment_" + i).submit(function(e){
+        e.preventDefault();
+        $("#form-comment_" + i).showFormError('');
+        var commentId = $("#form-comment_" + i).attr("ga-value").trim();
+        var reply_content = $("#form-comment_" + i).find('textarea').val().trim();
+        if (reply_content==='') {
+            return $("#form-comment_" + i).showFormError('请输入回复内容！');
+        }
+        $("#form-comment_" + i).postJSON("/api/commentList", { commentId:commentId,content: reply_content }, function (err, result) {
+                if (err) {
+                    return $("#form-comment_" + i).showFormError(err);
+                }
+                refresh();
+                $("#form-comment_" + i).css('display','block');
+        });
+    })
+}
+
+var hide = false;
+
+function showReplayClick(i){
+    //$("div[id^='commentsView_']").css('display','none');
+    hide = !hide
+    //$("i[id^='arrow_']").removeClass()
+    $("#arrow_"+i).removeClass()
+    $("#commnetsNum_"+i).hide()
+    if(hide){
+        $("#arrow_"+i).addClass("uk-icon-chevron-up")
+        $("#replay_"+i).html("&nbsp;·&nbsp;收起回复&nbsp;")
+        $("#commentsView_" + i).css('display','block');
+        $('#loading_'+i).show();
+        var commentId = $("#form-comment_" + i).attr("ga-value").trim();
+    
+        getJSON('/api/commentList/'+ commentId,function(err,data){
+            if(err){
+                return fatal(err);
+            }
+            $('#loading_'+i).hide();
+            $("#commentsView_" + i).css('display','block');
+         
+          var commentsUL = new Vue({
+                el: '#commentsUL_' + i,
+                data: {
+                    commentsLists: data.commentsList
+                },
+                filters: {
+                  formatDate:function (timestamp) {
+                     if (typeof(timestamp)==='string') {
+                            timestamp = parseInt(timestamp);
+                        }
+                        if (isNaN(timestamp)) {
+                            return '';
+                        }
+                        var
+                            today = new Date(),
+                            now = today.getTime(),
+                            s = '1分钟前',
+                            t = now - timestamp * 1000;
+                        if (t > 604800000) {
+                            // 1 week ago:
+                            var that = new Date(timestamp);
+                            var
+                                y = that.getFullYear(),
+                                m = that.getMonth() + 1,
+                                d = that.getDate(),
+                                hh = that.getHours(),
+                                mm = that.getMinutes();
+                            s = y===today.getFullYear() ? '' : y + '年';
+                            s = s + m + '月' + d + '日' + hh + ':' + (mm < 10 ? '0' : '') + mm;
+                        }
+                        else if (t >= 86400000) {
+                            // 1-6 days ago:
+                            s = Math.floor(t / 86400000) + '天前';
+                        }
+                        else if (t >= 3600000) {
+                            // 1-23 hours ago:
+                            s = Math.floor(t / 3600000) + '小时前';
+                        }
+                        else if (t >= 60000) {
+                            s = Math.floor(t / 60000) + '分钟前';
+                        }
+                        return s;
+                  }
+                },
+
+          })
+          //$('#commentsUL').show();
+     })
+    }else{
+        $("#commentsView_" + i).css('display','none');
+        $("#arrow_"+i).addClass("uk-icon-chevron-down")
+        var commnetsNum = $("#replay_"+i).attr("go-event").trim();
+        $("#replay_"+i).html("&nbsp;·&nbsp;"+ commnetsNum +"条回复&nbsp;")
+    }
+
+};
+
+function forkClick(followed_user){
+    postJSON("/api/follow/", { followed_user:followed_user },
+         function (err, result){
+                if (err) {
+                    return $form.showFormError(err);
+                }
+                refresh();
+        });
+}
+
+
+$(function () {
+    $("div[id^='loading_']").hide();
+    $("div[id^='commentsView_']").css('display','none');
+    var $form = $('#form-comment');
+    $form.submit(function (e) {
+        e.preventDefault();
+        $form.showFormError('');
+        var contentStr = $form.find('textarea').val().trim();
+        if (contentStr==='') {
+            return $form.showFormError('请输入评论内容！');
+        }
+        var blogId = $form.attr("ga-blog").trim();
+        $form.postJSON("/api/create/comments", { blog_id:blogId, content: contentStr }, function (err, result) {
+                if (err) {
+                    return;
+                }
+                refresh();
+        });
+    });
+
+
+     /*getJSON('/api/follow/'+ commentId,function(err,data){
+            if(err){
+                return fatal(err);
+            }
+            
+        });*/
+});
+</script>
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="uk-width-medium-3-4" >
+        <article class="uk-article">
+            <h2>{{ blog.title }}</h2>
+            <label id="blogId" hidden>{{blog.id}}</label>
+            <p class="uk-article-meta">{{ blog.user_name }} &nbsp;·&nbsp;发表于 {{ blog.created_at|datetime }}</p>
+            <p style="font-family:PingFang SC,Hiragino Sans GB,Microsoft YaHei,WenQuanYi Micro Hei,Helvetica Neue,Arial,sans-serif;margin: 16px 0;font-size: 16px;">{{ blog.html_content|safe }}</p>
+        </article>
+
+        <hr class="uk-article-divider">
+
+        {% if __user__ %}
+            <h3>{{comments|length}} 条评论</h3>
+
+            <article class="uk-comment">
+                <div class="uk-comment-body">
+                    <form id="form-comment" class="uk-form" ga-blog="{{blog.id}}">
+                        <div class="uk-alert uk-alert-danger uk-hidden"></div>
+                        <div class="uk-form-row">
+                            <textarea rows="3" placeholder="写下你的评论..." style="width:100%;resize:none;"></textarea>
+                        </div>
+                        <div class="uk-form-row">
+                            <button type="submit" class="uk-button uk-button-primary"><i class="uk-icon-comment"></i> 发表评论</button>
+                        </div>
+                    </form>
+                </div>
+            </article>
+        {% endif %}
+
+        <hr class="uk-article-divider">
+
+        <ul class="uk-comment-list">
+            {% for comment in comments %}
+            <li>
+                <article class="uk-comment">
+                    <header>
+                        <img class="uk-comment-avatar uk-border-circle" width="30" height="30" src="{{ comment.avatar }}">
+                        <h4 class="uk-comment-title">{{ comment.user_name }} &nbsp;·&nbsp;{{ comment.created_at|datetime }}</h4>
+                    </header>
+                    <div>
+                        <span style="color:#222;size:14px;line-height:24px;font-family:PingFang SC,Hiragino Sans GB,Microsoft YaHei,WenQuanYi Micro Hei,Helvetica Neue,Arial,sans-serif;">{{ comment.html_content|safe }}</span>
+                        <div style="color: #406599;margin-left: 30px;margin-top: 0px;width: 30px;float: left;cursor:pointer" id="replay" onclick="replayClick({{comment.index}})">回复 
+                        </div>
+                        {% if comment.commnetsNum %}
+                        <div style="cursor:pointer;float: left;color: #406599;" id="replay_{{comment.index}}" onclick="showReplayClick({{comment.index}})" go-event="{{comment.commnetsNum}}" >&nbsp;·&nbsp;{{comment.commnetsNum}} 条回复&nbsp;
+                        </div>
+                        <i id="arrow_{{comment.index}}" style="font-size: 14px; color: rgb(64, 101, 153);" class="uk-icon-chevron-down"></i>
+                         {% endif %}
+                    </div>
+                    <form id="form-comment_{{ comment.index}}" class="uk-form" style="display: none;margin-top: 10px;margin-left: 10px;" ga-value="{{ comment.id}}">
+                        <div class="uk-alert uk-alert-danger uk-hidden"></div>
+                        <div class="uk-form-row">
+                            <textarea rows="1" placeholder="写下你的回复..." style="width:100%;resize:none;"></textarea>
+                        </div>
+                        <div class="uk-form-row">
+                            <button onclick="replaySubmitClick({{comment.index}})" id="replay_btn_{{comment.index}}" class="uk-button uk-button-primary"><i class="uk-icon-comment"></i>回复</button>
+                        </div>
+                    </form>
+                    <div id="commentsView_{{comment.index}}" v-if="commentsLists">
+                        <div id="loading_{{comment.index}}" class="uk-width-1-1 uk-text-center">
+                            <span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i> 正在加载...</span>
+                        </div>
+                        <ul class="uk-comment-list" id="commentsUL_{{comment.index}}" style="margin-left: 40px;margin-top: 10px;" >
+                            <li v-repeat="commentsList: commentsLists">
+                                <article class="uk-comment" style="margin-top: 12px;">
+                                    <header>
+                                        <img class="uk-comment-avatar uk-border-circle" width="30" height="30" v-bind:src="/static/img/user.png">
+                                        <h4 class="uk-comment-title"><span v-text='commentsList.name'></span>&nbsp;·&nbsp;
+                                        <span v-text='commentsList.created_at | formatDate'></span></h4>
+                                    </header>
+                                    <div style="line-height:22px;font-size: 14px;color:#222;margin: 10px; " v-text='commentsList.content'>
+                                    </div>
+                                </article>
+                            </li>
+                        </ul>
+                    </div>
+                <hr class="uk-article-divider">
+            </li>
+            {% else %}
+            <p>还没有人评论...</p>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="uk-width-medium-1-4">
+        <div class="uk-panel uk-panel-box" style="height:260px;">
+            <div class="uk-text-center">
+                <img class="uk-border-circle" width="120" height="120" src="{{ blog.avatar }}">
+                <h3>{{ blog.user_name }}</h3>
+                <p style="line-height：0px"><a href="{{ blog.url }}" target="block">我的博客</a></p>
+                <span>{{blog.user_id}}</span>
+                {% if blog.user_id != __user__.id %}
+                <button id="forkBtn" style="font-size: 16px;font-weight: 400;color: #fff;line-height: 37px;width: 164px;background: #2a90d7;text-align: center;border: 1px solid #2a90d7;padding: 0;border-radius: 6px;cursor: pointer;font-family: yFont;padding-right:2px;" class="btn btn-primary" 
+                    onclick="forkClick('{{ blog.user_id }}')">+关 注</button>
+                {% endif %}
+            </div>
+        </div>
+        <div class="uk-panel uk-panel-header">
+            <h3 class="uk-panel-title">友情链接</h3>
+            <ul class="uk-list uk-list-line">
+                <li><i class="uk-icon-link"></i> <a href="#">编程</a></li>
+                <li><i class="uk-icon-link"></i> <a href="#">思考</a></li>
+                <li><i class="uk-icon-link"></i> <a href="#">读书</a></li>
+            </ul>
+        </div>
+    </div>
+
+{% endblock %}
