@@ -110,18 +110,77 @@ def authenticate(*,email,passwd):
 def followedUser(request,*,page=1):
 	if request.__user__ is not None:
 		user_Id = request.__user__.id
-		sql = " ".join(['SELECT u.*,f.status AS fstatus FROM follow f ',
-						'LEFT JOIN users u ON f.followed_user = u.id',
-						"WHERE f.user_id ='%s'"%user_Id,
-						"and f.status=1"])
+		# sql = " ".join(['SELECT u.*,f.followed_user FROM follow f ',
+		# 				'LEFT JOIN users u ON f.followed_user = u.id',
+		# 				"WHERE f.user_id ='%s'"%user_Id,
+		# 				"and f.status=1"])
+		# follows = yield from Follow.unionSelect(sql)
+
+		# sql = " ".join(['SELECT f1.status AS status1,f2.status AS status2 FROM follow f1,follow f2',
+		# 		'WHERE f1.user_id = f2.followed_user AND f1.followed_user = f2.user_id',
+		# 		"AND f1.user_id = '%s'"%user_Id])
+		# follow_relation  = yield from Follow.unionSelect(sql)
+
+		sql = " ".join(['SELECT u.*,f1.user_id,f1.followed_user,f1.status AS status1,f2.status AS status2 FROM follow f1',
+				'LEFT JOIN follow f2 ON f1.user_id = f2.followed_user AND f1.followed_user = f2.user_id',
+				'LEFT JOIN users u ON f1.followed_user = u.id',
+				"WHERE f1.user_id = '%s'"%user_Id])
 		follows = yield from Follow.unionSelect(sql)
+
+		#newFollows = []
+
+		for index,follow in enumerate(follows):
+			follow.index = index
+			follow.avatar_url = follow.avatar
+			follow.cf_count = 1
+			follow.cf_info = 'Python'
+
+			if follow.status1 == '1' and follow.status2 == '1':
+				relation_status = 2
+				is_followed = True
+				is_following = True
+			elif follow.status1 == '0' and follow.status2 == '1':
+				relation_status = 1
+				is_followed = False
+				is_following = True
+			elif follow.status1 == '1' and (follow.status2 == '0' or follow.status2 == None):
+				relation_status = 1
+				is_followed = True
+				is_following = False
+			else:
+				relation_status = 0
+				is_followed = False
+				is_following = False
+
+			follow.is_followed = is_followed
+			follow.is_following = is_following
+			follow.relation_status = relation_status
+
+			# newFollow = {}
+			# newFollow['index']= index
+			# newFollow['avatar_url'] = follow.avatar
+			# newFollow['is_followed'] = is_followed
+			# newFollow['is_following'] = is_following
+			# newFollow['relation_status'] = relation_status
+			# newFollows.append(newFollow)
+
 		return {
 			'__template__': 'user/follow.html',
 			'page':page,
 			'follows': follows
 		}
+		#return dict(data=newFollows)
 	else:
 		return web.HTTPFound('/signin')
+
+
+def relation_status(user_Id):
+	sql = " ".join(['SELECT f1.status AS status1,f2.status AS status2 FROM follow f1,follow f2',
+				'WHERE f1.user_id = f2.followed_user AND f1.followed_user = f2.user_id'
+				"AND f1.user_id = '%s'"%user_Id])
+	follow = yield from Follow.unionSelect(sql)
+	print (follow)
+	return follow
 
 @get('/manage/fans')
 def followerUser(request,*,page=1):

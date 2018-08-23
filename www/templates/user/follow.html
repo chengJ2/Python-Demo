@@ -36,6 +36,17 @@ $(function() {
         initVM(results);
     });*/
 
+    $("div[id^='relation_status_']").each(function(i){
+    	//console.log($("#relation_status_" + i).text())
+    	var text = $("#relation_status_" + i).text().trim();
+    	if (text == '1') {
+    		$("#relation_status_" + i).text("已关注")
+    	}else if(text == '2'){
+    		$("#relation_status_" + i).text("互相关注")
+    	}
+
+  	});
+
 });
 </script>
 
@@ -62,12 +73,12 @@ $(function() {
         <span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i> 正在加载...</span>
     </div>
 
-    <div class="uk-width-1-1 uk-margin-bottom">
+    <div id="followed" class="uk-width-1-1 uk-margin-bottom">
 	 {% for follow in follows %}
 	  <div style="height: 80px;">
-	    <img src="{{follow.avatar}}" style="width: 54px;height: 54px;border-radius: 50%; background: rgba(0,0,0,.08);float: left;">
+	    <img src="{{follow.avatar_url}}" style="width: 54px;height: 54px;border-radius: 50%; background: rgba(0,0,0,.08);float: left;">
 	    <div style="font-size: 18px;color: #222;line-height: 20px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;max-width: 500px;font-weight: 700;margin-bottom: 8px;"><a target="_blank" style="margin-left: 12px;">{{follow.name}}</a></div>
-	     <div style="float: right;">{{follow.fstatus}}</div>
+	     <div style="float: right;" id="relation_status_{{follow.index}}">{{follow.relation_status}}</div>
 	   </div>
 	 {% endfor %}
 	 {{ pagination('/?page=', page) }}
