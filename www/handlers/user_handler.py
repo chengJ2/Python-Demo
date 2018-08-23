@@ -121,19 +121,47 @@ def followedUser(request,*,page=1):
 		# 		"AND f1.user_id = '%s'"%user_Id])
 		# follow_relation  = yield from Follow.unionSelect(sql)
 
+		page_index = get_page_index(page)
+		num = yield from Follow.findNumber('count(id)',"user_id=? and status=?",[user_Id,1])
+		page = Page(num,page_index)
+
+		newFollows = []
+
 		sql = " ".join(['SELECT u.*,f1.user_id,f1.followed_user,f1.status AS status1,f2.status AS status2 FROM follow f1',
 				'LEFT JOIN follow f2 ON f1.user_id = f2.followed_user AND f1.followed_user = f2.user_id',
 				'LEFT JOIN users u ON f1.followed_user = u.id',
-				"WHERE f1.user_id = '%s'"%user_Id])
+				"WHERE f1.user_id = '%s'"%user_Id,
+				'LIMIT %s,%s'%(page.offset, page.limit)])
+
 		follows = yield from Follow.unionSelect(sql)
-
-		#newFollows = []
-
+		
 		for index,follow in enumerate(follows):
-			follow.index = index
-			follow.avatar_url = follow.avatar
-			follow.cf_count = 1
-			follow.cf_info = 'Python'
+			
+			newFollow = {}
+			newFollow['index']= index
+			newFollow['user_id'] = follow.id
+			newFollow['user_name'] = follow.name
+			newFollow['avatar_url'] = follow.avatar
+
+			sql2 = " ".join(['SELECT u.* FROM users u WHERE id IN(SELECT t1.followed_user FROM',
+					'(SELECT  user_Id,followed_user FROM follow',
+					"WHERE user_id = '%s'"%user_Id,
+					')AS t1 INNER JOIN'
+					'(SELECT  user_Id,followed_user FROM follow',
+					"WHERE user_id = '%s'"%follow.followed_user,
+					')AS t2',
+					'ON t1.followed_user = t2.followed_user) AND u.`status` = 1'])
+
+			followInfos = yield from Follow.unionSelect(sql2)
+
+			if(len(followInfos) >0):
+				newFollow['cf_count'] = len(followInfos)
+				newFollow['cf_info'] = followInfos[0].name
+				newFollow['followed_user'] = followInfos[0].id
+			else:
+				newFollow['cf_count'] = 0
+				newFollow['cf_info'] = ''
+				newFollow['followed_user'] = '#'
 
 			if follow.status1 == '1' and follow.status2 == '1':
 				relation_status = 2
@@ -152,22 +180,16 @@ def followedUser(request,*,page=1):
 				is_followed = False
 				is_following = False
 
-			follow.is_followed = is_followed
-			follow.is_following = is_following
-			follow.relation_status = relation_status
+			newFollow['is_followed'] = is_followed
+			newFollow['is_following'] = is_following
+			newFollow['relation_status'] = relation_status
 
-			# newFollow = {}
-			# newFollow['index']= index
-			# newFollow['avatar_url'] = follow.avatar
-			# newFollow['is_followed'] = is_followed
-			# newFollow['is_following'] = is_following
-			# newFollow['relation_status'] = relation_status
-			# newFollows.append(newFollow)
+			newFollows.append(newFollow)
 
 		return {
 			'__template__': 'user/follow.html',
 			'page':page,
-			'follows': follows
+			'follows': newFollows
 		}
 		#return dict(data=newFollows)
 	else:
